@@ -18,14 +18,18 @@ import json
 import os
 import asyncio
 
-TOKEN = os.environ.get("BOT_TOKEN", "PUT_YOUR_TOKEN_HERE")
+# ================== الإعدادات ==================
+TOKEN = os.environ.get("BOT_TOKEN")
 DATA_FILE = "turns.json"
+
+if not TOKEN:
+    raise RuntimeError("BOT_TOKEN is not set")
 
 STATES = ["مستمع", "متأخر", "حاضر", "تم"]
 STATE_EMOJIS = {"مستمع": "⏳", "متأخر": "⚠️", "حاضر": "✅", "تم": "✔️"}
 active_messages = {}
 
-# ------------------- إدارة البيانات -------------------
+# ================== إدارة البيانات ==================
 def load_data():
     if not os.path.exists(DATA_FILE):
         return {}
@@ -36,7 +40,7 @@ def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-# ------------------- التاريخ -------------------
+# ================== التاريخ ==================
 def current_dates():
     tz = pytz.timezone("Africa/Cairo")
     now = datetime.now(tz)
@@ -55,7 +59,7 @@ def current_dates():
         f"• هجري: {hijri_str}\n\n"
     )
 
-# ------------------- القائمة -------------------
+# ================== القائمة ==================
 def main_menu():
     keyboard = [
         [KeyboardButton("/turns")],
@@ -72,7 +76,7 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         pass
 
-# ------------------- بناء الرسالة -------------------
+# ================== بناء الرسالة ==================
 def build_message(chat_id):
     data = load_data()
     turns = data.get(chat_id, {})
@@ -97,7 +101,7 @@ def build_message(chat_id):
 
     return msg.strip()
 
-# ------------------- الأزرار -------------------
+# ================== الأزرار ==================
 def build_keyboard(chat_id, username=None, state_menu=None):
     data = load_data()
     turns = data.get(chat_id, {})
@@ -133,7 +137,7 @@ def build_keyboard(chat_id, username=None, state_menu=None):
 
     return InlineKeyboardMarkup(keyboard)
 
-# ------------------- الأوامر -------------------
+# ================== الأوامر ==================
 async def turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
     username = update.effective_user.first_name
@@ -187,7 +191,7 @@ async def clear_turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(chat_id, "🧹 تم مسح جميع الأدوار.")
 
-# ------------------- الأزرار -------------------
+# ================== الأزرار ==================
 async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -237,24 +241,26 @@ async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     active_messages[chat_id] = sent.message_id
 
-# ------------------- تشغيل البوت -------------------
-app = ApplicationBuilder().token(TOKEN).build()
+# ================== تشغيل البوت (Webhook) ==================
+if __name__ == "__main__":
+    PORT = int(os.environ.get("PORT", 8080))
+    WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 
-app.add_handler(CommandHandler("menu", menu))
-app.add_handler(CommandHandler("turns", turns))
-app.add_handler(CommandHandler("stop_turns", stop_turns))
-app.add_handler(CommandHandler("clear_turns", clear_turns))
-app.add_handler(CallbackQueryHandler(handler))
+    if not WEBHOOK_URL:
+        raise RuntimeError("WEBHOOK_URL is not set")
 
-PORT = int(os.environ.get("PORT", 8080))
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
+    app = ApplicationBuilder().token(TOKEN).build()
 
-if not WEBHOOK_URL:
-    raise RuntimeError("WEBHOOK_URL is not set")
+    app.add_handler(CommandHandler("menu", menu))
+    app.add_handler(CommandHandler("turns", turns))
+    app.add_handler(CommandHandler("stop_turns", stop_turns))
+    app.add_handler(CommandHandler("clear_turns", clear_turns))
+    app.add_handler(CallbackQueryHandler(handler))
 
-app.run_webhook(
-    listen="0.0.0.0",
-    port=PORT,
-    url_path=TOKEN,
-    webhook_url=f"{WEBHOOK_URL}/{TOKEN}",
-)
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=TOKEN,
+        webhook_url=f"{WEBHOOK_URL}/{TOKEN}",
+        drop_pending_updates=True
+    )
