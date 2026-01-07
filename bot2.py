@@ -53,10 +53,10 @@ def current_dates():
     hijri_str = f"{hijri.day:02d}/{hijri.month}/{hijri.year} هـ"
 
     return (
-        "📆 التاريخ (القاهرة):\n"
-        f"• اليوم: {day_name}\n"
-        f"• ميلادي: {miladi}\n"
-        f"• هجري: {hijri_str}\n\n"
+        "التاريخ (القاهرة):\n"
+        f"اليوم: {day_name}\n"
+        f"ميلادي: {miladi}\n"
+        f"هجري: {hijri_str}\n\n"
     )
 
 # ================== القائمة ==================
@@ -69,7 +69,7 @@ def main_menu():
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("📋 قائمة أوامر البوت:", reply_markup=main_menu())
+    await update.message.reply_text("قائمة أوامر البوت:", reply_markup=main_menu())
     try:
         await asyncio.sleep(0.2)
         await update.message.delete()
@@ -83,7 +83,7 @@ def build_message(chat_id):
 
     header = current_dates()
     if not turns:
-        return header + "📌 لا توجد تسجيلات حالياً."
+        return header + "لا توجد تسجيلات حالياً."
 
     sections = {state: [] for state in STATES}
     max_turn = max([int(k) for k in turns.keys()], default=0)
@@ -94,7 +94,7 @@ def build_message(chat_id):
             emoji = STATE_EMOJIS.get(state, "")
             sections[state].append(f"{i}. {emoji} {user}")
 
-    msg = header + "📌 قائمة الأدوار الحالية:\n\n"
+    msg = header + "قائمة الأدوار الحالية:\n\n"
     for state in STATES:
         if sections[state]:
             msg += f"{state}:\n" + "\n".join(sections[state]) + "\n\n"
@@ -143,7 +143,7 @@ async def turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.effective_user.first_name
 
     try:
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(0.2)
         await update.message.delete()
     except:
         pass
@@ -176,7 +176,7 @@ async def stop_turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         del active_messages[chat_id]
 
-    await context.bot.send_message(chat_id, "✅ تم إيقاف القائمة.")
+    await context.bot.send_message(chat_id, "تم إيقاف القائمة.")
 
 async def clear_turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
@@ -189,7 +189,7 @@ async def clear_turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         pass
 
-    await context.bot.send_message(chat_id, "🧹 تم مسح جميع الأدوار.")
+    await context.bot.send_message(chat_id, "تم مسح جميع الأدوار.")
 
 # ================== الأزرار ==================
 async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -204,7 +204,7 @@ async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data.startswith("take_"):
         if any(v[0] == username for v in data[chat_id].values()):
-            await query.answer("⚠️ لديك دور بالفعل", show_alert=True)
+            await query.answer("لديك دور بالفعل", show_alert=True)
             return
         num = query.data.split("_")[1]
         data[chat_id][num] = [username, "مستمع"]
@@ -212,7 +212,7 @@ async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data.startswith("change_"):
         num = query.data.split("_")[1]
         await query.edit_message_text(
-            "📌 اختر الحالة الجديدة:",
+            "اختر الحالة الجديدة:",
             reply_markup=build_keyboard(chat_id, username, state_menu=num)
         )
         return
@@ -241,14 +241,8 @@ async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     active_messages[chat_id] = sent.message_id
 
-# ================== تشغيل البوت (Webhook) ==================
+# ================== التشغيل (Railway – Async ثابت) ==================
 if __name__ == "__main__":
-    PORT = int(os.environ.get("PORT", 8080))
-    WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
-
-    if not WEBHOOK_URL:
-        raise RuntimeError("WEBHOOK_URL is not set")
-
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("menu", menu))
@@ -257,10 +251,9 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("clear_turns", clear_turns))
     app.add_handler(CallbackQueryHandler(handler))
 
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=TOKEN,
-        webhook_url=f"{WEBHOOK_URL}/{TOKEN}",
-        drop_pending_updates=True
-    )
+    async def main():
+        await app.initialize()
+        await app.start()
+        await asyncio.Event().wait()
+
+    asyncio.run(main())
