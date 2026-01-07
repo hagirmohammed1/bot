@@ -1,4 +1,3 @@
 python-telegram-bot==20.7
+hijridate
 pytz
-hijri-converter==2.3.1
-hijridate==2.3.0
