@@ -230,4 +230,17 @@ app.add_handler(CommandHandler("turns", turns))
 app.add_handler(CommandHandler("stop_turns", stop_turns))
 app.add_handler(CommandHandler("clear_turns", clear_turns))
 app.add_handler(CallbackQueryHandler(handler))
-app.run_polling()
+import os
+
+TOKEN = os.environ["BOT_TOKEN"]
+PORT = int(os.environ.get("PORT", 8080))
+WEBHOOK_URL = os.environ["WEBHOOK_URL"]
+
+app.run_webhook(
+    listen="0.0.0.0",
+    port=PORT,
+    url_path=TOKEN,
+    webhook_url=f"{WEBHOOK_URL}/{TOKEN}",
+)
+
+
