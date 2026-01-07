@@ -230,11 +230,11 @@ app.add_handler(CommandHandler("turns", turns))
 app.add_handler(CommandHandler("stop_turns", stop_turns))
 app.add_handler(CommandHandler("clear_turns", clear_turns))
 app.add_handler(CallbackQueryHandler(handler))
-import os
-
-TOKEN = os.environ["BOT_TOKEN"]
 PORT = int(os.environ.get("PORT", 8080))
-WEBHOOK_URL = os.environ["WEBHOOK_URL"]
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
+
+if not WEBHOOK_URL:
+    raise RuntimeError("WEBHOOK_URL is not set")
 
 app.run_webhook(
     listen="0.0.0.0",
@@ -242,5 +242,7 @@ app.run_webhook(
     url_path=TOKEN,
     webhook_url=f"{WEBHOOK_URL}/{TOKEN}",
 )
+
+
 
 
