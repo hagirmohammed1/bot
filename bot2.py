@@ -11,7 +11,7 @@ from telegram.ext import (
     CallbackQueryHandler,
     ContextTypes
 )
-from hijridate import Hijri, Gregorian
+from hijridate import Gregorian
 from datetime import datetime
 import pytz
 import json
@@ -70,8 +70,8 @@ def main_menu():
 
 async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("قائمة أوامر البوت:", reply_markup=main_menu())
+    await asyncio.sleep(0.2)
     try:
-        await asyncio.sleep(0.2)
         await update.message.delete()
     except:
         pass
@@ -142,8 +142,8 @@ async def turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
     username = update.effective_user.first_name
 
+    await asyncio.sleep(0.2)
     try:
-        await asyncio.sleep(0.2)
         await update.message.delete()
     except:
         pass
@@ -241,7 +241,7 @@ async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     active_messages[chat_id] = sent.message_id
 
-# ================== التشغيل (Railway – Async ثابت) ==================
+# ================== التشغيل (Railway – Polling نهائي) ==================
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
 
@@ -251,9 +251,4 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("clear_turns", clear_turns))
     app.add_handler(CallbackQueryHandler(handler))
 
-    async def main():
-        await app.initialize()
-        await app.start()
-        await asyncio.Event().wait()
-
-    asyncio.run(main())
+    app.run_polling(drop_pending_updates=True)
