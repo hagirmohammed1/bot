@@ -11,7 +11,9 @@ from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     CallbackQueryHandler,
-    ContextTypes
+    ContextTypes,
+    MessageHandler,
+    filters
 )
 from hijridate import Gregorian
 from datetime import datetime
@@ -171,7 +173,6 @@ async def turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
     username = update.effective_user.first_name
 
-    await asyncio.sleep(0.2)
     try:
         await update.message.delete()
     except:
@@ -184,8 +185,8 @@ async def turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
 
     sent = await context.bot.send_message(
-        chat_id=chat_id,
-        text=build_message(chat_id),
+        chat_id,
+        build_message(chat_id),
         reply_markup=build_keyboard(chat_id, username)
     )
     active_messages[chat_id] = sent.message_id
@@ -274,9 +275,9 @@ async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # 🔒 حظر جميع الأوامر النصية لغير المشرفين
+    # 🔒 التقاط أي أمر نصي ومنع غير المشرف
     app.add_handler(
-        CommandHandler(commands=None, callback=block_non_admin_commands),
+        MessageHandler(filters.COMMAND, block_non_admin_commands),
         group=0
     )
 
