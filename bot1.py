@@ -33,7 +33,6 @@ active_messages = {}
 
 # ================== التحقق من المشرف ==================
 async def admin_only(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    # السماح في الخاص (احذف هذا الشرط إن لم ترده)
     if update.effective_chat.type == "private":
         return True
 
@@ -41,7 +40,6 @@ async def admin_only(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool
         update.effective_chat.id,
         update.effective_user.id
     )
-
     return isinstance(member, (ChatMemberAdministrator, ChatMemberOwner))
 
 
@@ -49,6 +47,14 @@ async def block_non_admin_commands(update: Update, context: ContextTypes.DEFAULT
     if not await admin_only(update, context):
         try:
             await update.message.delete()
+        except:
+            pass
+
+        try:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="❌ عذرًا، هذا الأمر مخصص للمشرفين فقط."
+            )
         except:
             pass
 
@@ -268,7 +274,7 @@ async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # 🔒 حظر كل الأوامر النصية لغير المشرفين (حذف صامت)
+    # 🔒 حظر جميع الأوامر النصية لغير المشرفين
     app.add_handler(
         CommandHandler(commands=None, callback=block_non_admin_commands),
         group=0
