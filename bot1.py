@@ -1,8 +1,8 @@
 from telegram import (
-    Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
+    Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, ChatMemberAdministrator, ChatMemberOwner
 )
 from telegram.ext import (
-    ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+    ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters, ApplicationHandlerStop
 )
 from hijridate import Gregorian
 from datetime import datetime
@@ -28,7 +28,7 @@ async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     if chat.type == "private":
         return True
     member = await context.bot.get_chat_member(chat.id, user.id)
-    return member.status in ("administrator", "creator")
+    return isinstance(member, (ChatMemberAdministrator, ChatMemberOwner))
 
 async def deny_non_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     if not await is_admin(update, context):
@@ -39,13 +39,13 @@ async def deny_non_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         try:
             warn = await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text="❌ هذا الأمر مخصص للمشرفين فقط."
+                text="❌ عذرًا، هذا الأمر مخصص للمشرفين فقط."
             )
             await asyncio.sleep(3)
             await warn.delete()
         except:
             pass
-        return True
+        raise ApplicationHandlerStop
     return False
 
 # ================== إدارة البيانات ==================
@@ -76,8 +76,7 @@ def main_menu():
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if await deny_non_admin(update, context):
-        return
+    await deny_non_admin(update, context)
     await update.message.reply_text("قائمة أوامر البوت:", reply_markup=main_menu())
     await update.message.delete()
 
@@ -128,8 +127,7 @@ def build_keyboard(chat_id, username=None, state_menu=None):
 
 # ================== أوامر المشرف ==================
 async def turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if await deny_non_admin(update, context):
-        return
+    await deny_non_admin(update, context)
     chat_id = str(update.effective_chat.id)
     username = update.effective_user.first_name
     await update.message.delete()
@@ -139,18 +137,16 @@ async def turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
     active_messages[chat_id] = sent.message_id
 
 async def stop_turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if aait deny_non_admin(update, context):
-        return
+    await deny_non_admin(update, context)
     chat_id = str(update.effective_chat.id)
     await update.message.delete()
     if chat_id in active_messages:
         await context.bot.delete_message(chat_id, active_messages[chat_id])
         del active_messages[chat_id]
-    await context.bot.send_message(chat_id, "تم إيقاف القائمة دون حذف الادوار .")
+    await context.bot.send_message(chat_id, "تم إيقاف القائمة دون حذف الادوار.")
 
 async def clear_turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if await deny_non_admin(update, context):
-        return
+    await deny_non_admin(update, context)
     chat_id = str(update.effective_chat.id)
     data = load_data()
     data[chat_id] = {}
@@ -193,14 +189,16 @@ async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
 
+    # 🔒 منع جميع الأوامر النصية لغير المشرفين
+    app.add_handler(MessageHandler(filters.COMMAND, deny_non_admin), group=0)
+
     # ✅ أوامر المشرف
-    app.add_handler(CommandHandler("menu", menu))
-    app.add_handler(CommandHandler("turns", turns))
-    app.add_handler(CommandHandler("stop_turns", stop_turns))
-    app.add_handler(CommandHandler("clear_turns", clear_turns))
+    app.add_handler(CommandHandler("menu", menu), group=1)
+    app.add_handler(CommandHandler("turns", turns), group=1)
+    app.add_handler(CommandHandler("stop_turns", stop_turns), group=1)
+    app.add_handler(CommandHandler("clear_turns", clear_turns), group=1)
 
     # 🟢 الأزرار للجميع
-    app.add_handler(CallbackQueryHandler(handler))
+    app.add_handler(CallbackQueryHandler(handler), group=2)
 
     app.run_polling(drop_pending_updates=True)
-w
