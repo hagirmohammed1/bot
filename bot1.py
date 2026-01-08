@@ -53,10 +53,12 @@ async def block_non_admin_commands(update: Update, context: ContextTypes.DEFAULT
             pass
 
         try:
-            await context.bot.send_message(
+            warn_msg = await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text="❌ عذرًا، هذا الأمر مخصص للمشرفين فقط."
             )
+            await asyncio.sleep(3)
+            await warn_msg.delete()
         except:
             pass
 
@@ -206,7 +208,7 @@ async def stop_turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         del active_messages[chat_id]
 
-    await context.bot.send_message(chat_id, "تم إيقاف القائمة.")
+    await context.bot.send_message(chat_id, " تم إيقاف القائمة دون حذف الادوار.")
 
 async def clear_turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
@@ -275,7 +277,7 @@ async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # 🔒 التقاط أي أمر نصي ومنع غير المشرف
+    # 🔒 منع أي أمر نصي لغير المشرف
     app.add_handler(
         MessageHandler(filters.COMMAND, block_non_admin_commands),
         group=0
