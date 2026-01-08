@@ -13,7 +13,8 @@ from telegram.ext import (
     CallbackQueryHandler,
     ContextTypes,
     MessageHandler,
-    filters
+    filters,
+    ApplicationHandlerStop
 )
 from hijridate import Gregorian
 from datetime import datetime
@@ -53,14 +54,17 @@ async def block_non_admin_commands(update: Update, context: ContextTypes.DEFAULT
             pass
 
         try:
-            warn_msg = await context.bot.send_message(
+            warn = await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text="❌ عذرًا، هذا الأمر مخصص للمشرفين فقط."
             )
             await asyncio.sleep(3)
-            await warn_msg.delete()
+            await warn.delete()
         except:
             pass
+
+        # ⛔ إيقاف تنفيذ أي Handler آخر
+        raise ApplicationHandlerStop
 
 # ================== إدارة البيانات ==================
 def load_data():
@@ -103,11 +107,7 @@ def main_menu():
 
 async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("قائمة أوامر البوت:", reply_markup=main_menu())
-    await asyncio.sleep(0.2)
-    try:
-        await update.message.delete()
-    except:
-        pass
+    await update.message.delete()
 
 # ================== بناء الرسالة ==================
 def build_message(chat_id):
@@ -175,16 +175,10 @@ async def turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
     username = update.effective_user.first_name
 
-    try:
-        await update.message.delete()
-    except:
-        pass
+    await update.message.delete()
 
     if chat_id in active_messages:
-        try:
-            await context.bot.delete_message(chat_id, active_messages[chat_id])
-        except:
-            pass
+        await context.bot.delete_message(chat_id, active_messages[chat_id])
 
     sent = await context.bot.send_message(
         chat_id,
@@ -195,32 +189,20 @@ async def turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def stop_turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
-
-    try:
-        await update.message.delete()
-    except:
-        pass
+    await update.message.delete()
 
     if chat_id in active_messages:
-        try:
-            await context.bot.delete_message(chat_id, active_messages[chat_id])
-        except:
-            pass
+        await context.bot.delete_message(chat_id, active_messages[chat_id])
         del active_messages[chat_id]
 
-    await context.bot.send_message(chat_id, " تم إيقاف القائمة دون حذف الادوار.")
+    await context.bot.send_message(chat_id, " تم إيقاف القائمة دون مسح الادوار.")
 
 async def clear_turns(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
     data = load_data()
     data[chat_id] = {}
     save_data(data)
-
-    try:
-        await update.message.delete()
-    except:
-        pass
-
+    await update.message.delete()
     await context.bot.send_message(chat_id, "تم مسح جميع الأدوار.")
 
 # ================== الأزرار ==================
@@ -261,10 +243,7 @@ async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_data(data)
 
     if chat_id in active_messages:
-        try:
-            await context.bot.delete_message(chat_id, active_messages[chat_id])
-        except:
-            pass
+        await context.bot.delete_message(chat_id, active_messages[chat_id])
 
     sent = await context.bot.send_message(
         chat_id,
@@ -277,13 +256,13 @@ async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # 🔒 منع أي أمر نصي لغير المشرف
+    # 🔒 منع جميع الأوامر النصية لغير المشرفين
     app.add_handler(
         MessageHandler(filters.COMMAND, block_non_admin_commands),
         group=0
     )
 
-    # ✅ أوامر المشرف
+    # ✅ أوامر المشرف فقط
     app.add_handler(CommandHandler("menu", menu), group=1)
     app.add_handler(CommandHandler("turns", turns), group=1)
     app.add_handler(CommandHandler("stop_turns", stop_turns), group=1)
